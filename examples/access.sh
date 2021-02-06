@@ -17,7 +17,8 @@ specify_user() {
 
 enter_password() {
     local password
-    read password
+    printf "password: "
+    read -s password
 
     apply $password
 }
