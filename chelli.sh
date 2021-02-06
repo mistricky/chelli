@@ -72,8 +72,14 @@ set_metadata() {
     CLI_version=${3:-"v1.0.0"}
 }
 
+# CLI_usage
+set_usage() {
+    CLI_usage=$1
+}
+
 print_version() {
     echo "$CLI_name version $CLI_version"
+    exit
 }
 
 # option_name 
@@ -120,7 +126,7 @@ print_help() {
     echo 
     echo $CLI_description
     echo 
-    echo "Usage: $CLI_name [options] commands"
+    echo ${CLI_usage:-"Usage: $CLI_name [options] commands"}
     echo
 
     for command_name help_option in ${(kv)HELP_OPTION_INFO}
@@ -131,11 +137,12 @@ print_help() {
     done
 
     echo 
+    exit
 }
 
 # build-in options
-option "v" "version" "display version" print_version
-option "h" "help" "sss sss" print_help "*"
+option "v" "version" "Print version information & quit" print_version
+option "h" "help" "Print handbook & quit" print_help "*"
 
 # args
 cli_parse() {
