@@ -7,9 +7,135 @@
 
 Chelli is a function set that implements command-line parsing using Zsh Shell. And the name of Chelli means a combination of Shell and CLI.
 
-## Usage
+## Installation
+Chelli is a set of Zsh functions, so you just need to import Chelli into your source file like the following code snippet.
+```zsh
+source your_chelli_path/chelli.sh
+
+# your source code
+```
+
+## Build-in options
+Basiclly, a CLI usually have a `-h, --help` option to show help information, also have `-v, --version` to display version information of this CLI, but fortunately is Chelli have two build-in options `-v, --version` and `-h, --help`, you can call `set_metadata` to complete CLI information and the two build-in options will use them to display later.
+
+```zsh
+#!/bin/zsh
+source ./chelli.sh
+
+# CLI name, CLI description, CLI version
+set_metadata Foo "Whatever" "V1.0.0"
+```
+Let's take a look help information of the "Foo", run `./foo.sh -h` you will get the following output in your terminal.
+
+```zsh
+Whatever
+
+Usage: Foo [options] commands
+
+Options:
+
+-v, --version   Print version information & quit
+-h, --help   Print handbook & quit
+```
+That's easy right? also you can print version information via `./foo.sh -v`.
+```
+Foo version V1.0.0
+```
+
+And It's worth mention that the build-in option which just like `-h, --help` and `-v, --version` is implemented using `option` function by Chelli, so you can override the two build-in option if you wanna display the information you wanna display or something like that.
+
+This code snippet from Chelli:
+```zsh
+# build-in options
+option "v" "version" "Print version information & quit" print_version
+option "h" "help" "Print handbook & quit" print_help "*"
+```
+You might notice that there is an `*` in above codes, this is a `Wildcard character` in Chelli, for more detail see [Options](https://github.com/youncccat/chelli#options).
 
 ## Commands
+Commands is an important part of CLI, you can using `command` function to define your command. The `command` function take four arguments which are `name`, `description`, `action handler` and `arguments`.
+
+In this case which is simplest usage of `command`.
+```zsh
+#!/bin/zsh
+source ../chelli.sh;
+
+foo_command_action() {
+  echo "foo is invoke!"
+}
+
+command "foo" "whatever" foo_command_action
+
+cli_parse $@
+```
+
+> Notice: the `arguments` is a optional argument, so you can call `command` without `arguments`, just like the above code.
+
+When you run `./foo.sh foo` you will see:
+```zsh
+foo is invoke!
+```
+
+### Run command with arguments
+In addition, you can run command with arguments which just like `cli command <arg> [arg]` or something like that, Chelli will parse the arguments and pass them into corresponding action of the command.
+
+#### Required argument
+the `<args>` is enclosed by angle brackets that meaning the `<arg>` is required argument, consider the following code.
+
+```zsh
+#!/bin/zsh
+source ../chelli.sh;
+
+# the first argument is the value of name
+foo_command_action() {
+  echo "the name is $1"
+  echo "foo is invoke!"
+}
+
+command "foo" "whatever" foo_command_action "<name>"
+
+cli_parse $@
+```
+
+If you run `./foo.sh foo Jon`, you will see the following output:
+```zsh
+the name is Jon
+foo is invoke!
+```
+But if you forget to write the name argument like `./foo foo`, then you will get the following error and the program will crash.
+```zsh
+[Argument Error]: The name argument is required
+```
+
+#### Optional argument
+The `optional argument` is same to `required argument` which is only difference between them is the `optional argument` is you can run command without the `optionl argument` just like the name of it.
+
+Let's update the above codes like:
+```
+#!/bin/zsh
+source ../chelli.sh;
+
+# the first argument is the value of name
+foo_command_action() {
+  echo "the name is $1"
+  echo "foo is invoke!"
+}
+
+# use optional argument
+command "foo" "whatever" foo_command_action "[name]"
+
+cli_parse $@
+```
+Output:
+```zsh
+the name is 
+foo is invoke!
+```
+You may have notice that if the `name` argument is missing when call the `foo` command, the action handler of `foo` command receives the value of `name` is `""`, but you can't see any error same by `required argument`.
+
+> Notice: the value of each arguments will passed as function arguments to the corresponding action of the command
+
+### Run command with options 
 
 ## Options
 
