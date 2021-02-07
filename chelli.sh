@@ -40,6 +40,11 @@ command_error() {
     format_error "Command Error" "${1}"
 }
 
+# error_message
+argument_error() {
+    format_error "Argument Error" "${1}"
+}
+
 # has_value short_option long_option description fn specify_command
 _option() {
     local specify_command=${6:-"main"}
@@ -50,9 +55,18 @@ _option() {
     HELP_OPTION_INFO[$key_name]="-$2, --$3   $4"
 }
 
-# name description fn
+# name description fn arguments
 command() {
-    COMMANDS[$1]="$3"
+    # check arguments
+    for arg in ${@:4}
+    do
+        if ! [[ $arg =~ "(<.+>|\[.+\])" ]];then
+            argument_error "Please ensure the argument are define using [] or <>"
+        fi
+    done
+    
+    arguments=`echo ${@:4} | sed -E 's/</__lt__/g' | sed -E 's/>/__gt__/g' | sed -E 's/\[/__lsb__/g' | sed -E 's/\]/__gsb__/g'`
+    COMMANDS[$1]="$3 $arguments"
 
     HELP_COMMAND_INFO+=("$1   $2")
 }
@@ -108,6 +122,7 @@ apply() {
     OPTION_VALUES[$current_walk_option_name]=$1
 }
 
+# arguments
 exec_options() {
     for long_option_name val in ${(kv)WAIT_FOR_EXEC_OPTION_ACTIONS}
     do
@@ -118,7 +133,10 @@ exec_options() {
         eval ${exec_arr[0]} ${exec_arr[1]} $CURRENT_COMMAND_NAME
     done
 
-    $COMMANDS[$CURRENT_COMMAND_NAME] $OPTION_VALUES
+    eval local command_info="(${COMMANDS[$CURRENT_COMMAND_NAME]})"
+
+    $command_info[1] $@
+    # $COMMANDS[$CURRENT_COMMAND_NAME] $OPTION_VALUES
 }
 
 # command_name
@@ -127,14 +145,56 @@ print_help() {
     echo $CLI_description
     echo 
     echo ${CLI_usage:-"Usage: $CLI_name [options] commands"}
-    echo
 
-    for command_name help_option in ${(kv)HELP_OPTION_INFO}
-    do
-        if [[ $command_name =~ "^$1\|" || $command_name =~ "^\\$WILDCARD_COMMAND_NAME\|" ]];then
-            echo $help_option
+    local wait_for_print_options_help_info=('\nOptions:\n')
+    local wait_for_print_command_help_info=("\nCommands:\n")
+    local target_command_name=$1
+
+    collect_option_help_info() {
+        for command_name help_option in ${(kv)HELP_OPTION_INFO}
+        do
+            if [[ $command_name =~ "^$target_command_name\|" || $command_name =~ "^\\$WILDCARD_COMMAND_NAME\|" ]];then
+                wait_for_print_options_help_info+=($help_option)
+            fi
+        done
+    }
+
+    collect_command_help_info() {
+        for command_help_info in $HELP_COMMAND_INFO
+        do
+            if [[ $target_command_name == $INIT_COMMAND_NAME ]];then
+                wait_for_print_command_help_info+=($command_help_info)
+            fi
+        done
+    }
+
+    print_command_help_info() {
+        if [[ ${#wait_for_print_command_help_info[@]} == 1 ]];then
+            return
         fi
-    done
+
+        for help_option in $wait_for_print_command_help_info
+        do 
+            echo $help_option
+        done
+    }
+
+    print_option_help_info() {
+        if [[ ${#wait_for_print_options_help_info[@]} == 1 ]];then
+            return
+        fi
+
+        for help_option in $wait_for_print_options_help_info
+        do 
+            echo $help_option
+        done
+    }
+
+    collect_option_help_info
+    collect_command_help_info
+
+    print_option_help_info  
+    print_command_help_info
 
     echo 
     exit
@@ -146,12 +206,13 @@ option "h" "help" "Print handbook & quit" print_help "*"
 
 # args
 cli_parse() {
-    local is_skip=false
+    local skip_args_count=0
+    local arguments=()
 
     for i ({1..${#*[@]}})
     do  
-        if [[ $is_skip == true ]];then
-            is_skip=false
+        if [[ $skip_args_count > 0 ]];then
+            skip_args_count=$((skip_args_count - 1))
             continue
         fi
 
@@ -166,7 +227,7 @@ cli_parse() {
             # is option
             # the option have to accept a value 
             if [[ ${CURRENT_WALK_OPTION[4]} == true ]];then
-                is_skip=true
+                skip_args_count=$((skip_args_count + 1))
                 local value=${*[i+1]}
                 
                 if [[ $value == "" ]];then
@@ -191,13 +252,55 @@ cli_parse() {
                 if [[ $command_name == $arg ]];then
                     CURRENT_COMMAND_NAME=$command_name
                     is_command=true
+
+                    eval local command_info="(${COMMANDS[$CURRENT_COMMAND_NAME]})"
+                    local receive_arguments=(${command_info:1})
+                    local required_arguments=()
+                    local option_arguments=()
+
+                    for receive_arg in $receive_arguments
+                    do
+                        # required argument
+                        if [[ $receive_arg =~ "__lt__(.+)__gt__" ]];then
+                            required_arguments+=($match[1])
+                        fi
+
+                        if [[ $receive_arg =~ "__lsb__(.+)__gsb__" ]];then
+                            option_arguments+=($match[1])
+                        fi
+                    done
+
+                    local current_argument=()
+                    
+                    for arg in ${*:2}
+                    do
+                        if [[ $arg =~ "^(-|--)" ]];then
+                           break 
+                        fi
+
+                        current_argument+=($arg)
+                    done
+
+                    # check required argument
+                    if [[ ${#current_argument} < ${#required_arguments} ]];then
+                        argument_error "The ${required_arguments[$((${#current_argument} + 1))]} argument is required"
+                    # have optional argument
+                    elif [[ ${#current_argument} -ge ${#required_arguments} ]];then 
+                        if [[ $((${#current_argument} - ${#required_arguments})) > ${#option_arguments} ]];then
+                            argument_error "The ${current_argument[$((${#required_arguments} + ${#option_arguments}))]} argument is undefined"
+                        else
+                            arguments=($current_argument)
+                            skip_args_count=${#current_argument}
+                        fi
+                    fi
+
                     break
                 fi
             done
 
             if [[ $is_command == true ]];then
                 continue
-            fi
+            fi            
         fi
 
         # boundary
@@ -208,5 +311,5 @@ cli_parse() {
         fi
     done
 
-    exec_options
+    exec_options $arguments
 }
