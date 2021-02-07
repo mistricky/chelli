@@ -218,6 +218,10 @@ cli_parse() {
 
         local arg=${*[i]}
 
+        if [[ $arg == "" ]];then
+            continue
+        fi
+
         if [[ $arg =~ "^(-|--)" ]];then
             _exract_option ${*[i]}
 
