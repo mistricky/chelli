@@ -1,8 +1,19 @@
-# Chelli
+<div>
+  <p align="center"><img width=250 src="https://github.com/youncccat/chelli/blob/main/doc/logo.png" alt="Chelli"></p>
+</div>
+<p align="center">
+  <h1 align="center">Chelli</h1>
+</p>
 
 Chelli is a function set that implements command-line parsing using Zsh Shell. And the name of Chelli means a combination of Shell and CLI.
 
 ## Usage
+
+## Commands
+
+## Options
+
+## Examples
 You can found an example that is used to simulate the behavior of login into the database. Following is some code snippets, for more detail see **[access.sh](https://github.com/youncccat/chelli/blob/main/examples/access.sh)**.
 
 ```zsh
