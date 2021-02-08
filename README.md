@@ -127,7 +127,7 @@ But if you forget to write the name argument like `./foo foo`, then you will get
 The `optional argument` is same to `required argument` which is only difference between them is the `optional argument` is you can run command without the `optionl argument` just like the name of it.
 
 Let's update the above codes like:
-```
+```zsh
 #!/bin/zsh
 source ../chelli.sh;
 
