@@ -15,9 +15,9 @@ source your_chelli_path/chelli.sh
 # your source code
 ```
 
-## Get start
+## Get started
 Chelli can help you create a CLI quickly, you can call `parse_cli` which is the only step to write a simple CLI.
-```
+```zsh
 #!/bin/zsh
 source ./chelli.sh
 
