@@ -15,6 +15,17 @@ source your_chelli_path/chelli.sh
 # your source code
 ```
 
+## Get start
+Chelli can help you create a CLI quickly, you can call `parse_cli` which is the only step to write a simple CLI.
+```
+#!/bin/zsh
+source ./chelli.sh
+
+cli_parse $@
+```
+
+Perfect! so far you have your first own CLI create by Chelli, then you can try `-h, --help` or `-v, --version` to print information of the CLI.
+
 ## Build-in options
 Basiclly, a CLI usually have a `-h, --help` option to show help information, also have `-v, --version` to display version information of this CLI, but fortunately is Chelli have two build-in options `-v, --version` and `-h, --help`, you can call `set_metadata` to complete CLI information and the two build-in options will use them to display later.
 
@@ -24,6 +35,8 @@ source ./chelli.sh
 
 # CLI name, CLI description, CLI version
 set_metadata Foo "Whatever" "V1.0.0"
+
+cli_parse $@
 ```
 Let's take a look help information of the "Foo", run `./foo.sh -h` you will get the following output in your terminal.
 
@@ -78,6 +91,9 @@ foo is invoke!
 
 ### Run command with arguments
 In addition, you can run command with arguments which just like `cli command <arg> [arg]` or something like that, Chelli will parse the arguments and pass them into corresponding action of the command.
+
+### Main command
+Main command is current program that means is your running CLI.
 
 #### Required argument
 the `<args>` is enclosed by angle brackets that meaning the `<arg>` is required argument, consider the following code.
@@ -136,8 +152,80 @@ You may have notice that if the `name` argument is missing when call the `foo` c
 > Notice: the value of each arguments will passed as function arguments to the corresponding action of the command
 
 ### Run command with options 
+Of course, you can run any command with options, you just need to write option after the command, for instance:
+```zsh
+./foo.sh foo -n Jon
+```
+The `-n` is an option of the `foo` command, Chelli will parse the option and pass it into the hash table which name is `OPTION_VALUES` using `apply` function, this means is you can read value of each options via `OPTION_VALUES` hash table.
+
+```zsh
+#!/bin/zsh
+#!/bin/zsh
+source ../chelli.sh;
+
+foo_command_action() {
+  echo "the name is $OPTION_VALUES[name]"
+  echo "foo is invoke!"
+}
+
+# the function will be invoke when the name option is parsed
+name_option_action() {
+    apply $1
+}
+
+# use optional argument
+command "foo" "whatever" foo_command_action "[name]"
+required_option "n" "name" "whatever" name_option_action "foo"
+
+cli_parse $@
+```
+
+When the `name_option_action` is invoked, apply will set `$1`(value of name) into `OPTION_VALUES`, and then you can read the value of name from `OPTION_VALUES`, but the `apply` function doesn't get called automatically, this means that you have to call the `apply` funtion manually in action of the option.
+
+Run the above code, you will see the name is print in the terminal.
+
+```zsh
+the name is Jon
+foo is invoke!
+```
 
 ## Options
+Option is another from CLI arguments that usually start with `-` or `--`, and option is same to `arguments`, also have `required_option` and `option(optional option)`. And the `option` function take five arguments which is `short option name`, `long option name`, `description of the option`, `option action handler` and `bind command name`, It's worth mention that if `bind command name` is empty, option will bind on the `main command`.
+
+Consider the following code:
+```zsh
+foo_action() {
+  echo "foo action"
+}
+
+option "f" "foo" "description" foo_action
+```
+
+Add the above code in your code and run with `./cli_name.sh -f` that will print:
+```zsh
+foo action
+```
+
+And of course you can specify the comamnd that you wanna bind, you can just need to append the command name after the action argument just like:
+```zsh
+option "f" "foo" "description" foo_action "spycify_command_name"
+```
+Then run `./cli_name.sh spycify_command_name -f` you will see the result same to the above example.
+
+### Required option
+If you wanna pass a value to any option, you can use `required_option`, for instance:
+```zsh
+foo_action() {
+  echo "value is $1"
+}
+
+required_option "f" "foo" "description" foo_action "spycify_command_name"
+```
+
+Then run with `./cli_name.sh -f bar`, you will see
+```zsh
+value is bar
+```
 
 ## Examples
 You can found an example that is used to simulate the behavior of login into the database. Following is some code snippets, for more detail see **[access.sh](https://github.com/youncccat/chelli/blob/main/examples/access.sh)**.
