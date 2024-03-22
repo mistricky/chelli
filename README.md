@@ -160,7 +160,6 @@ The `-n` is an option of the `foo` command, Chelli will parse the option and pas
 
 ```zsh
 #!/bin/zsh
-#!/bin/zsh
 source ../chelli.sh;
 
 foo_command_action() {
